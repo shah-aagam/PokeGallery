@@ -1,113 +1,161 @@
-import { useState ,useEffect } from 'react'
-import axios from 'axios'
-import { ToastContainer, toast } from 'react-toastify';
-import 'bootstrap/dist/css/bootstrap.min.css';
-
-import 'react-toastify/dist/ReactToastify.css';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import 'tailwindcss/tailwind.css';
+import './App.css';
 
 function App() {
-
-  const [ posts , setPosts ] = useState([])
-  const [ postToDelete , setPostToDelete ] = useState(null)
-
-  const openDeleteModal = (id) => {
-    const post = posts.find(item => item.id === id);
-    setPostToDelete(post);
-  }  
+  const [pokemon, setPokemon] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredPokemon, setFilteredPokemon] = useState([]);
+  const [characters, setCharacters] = useState([]);
+  const [loading, setLoading] = useState(true); 
+  const title = "Welcome To PokeGallery";
 
   useEffect(() => {
     axios
-         .get('https://jsonplaceholder.typicode.com/posts')
-         .then((response)=> {
-            // console.log(response.data);
-            setPosts(response.data);
-         })
-         .catch((err) => {
-          console.log(err.message);
-       });
-  }, [])
+      .get('https://pokeapi.co/api/v2/pokemon?limit=20')
+      .then((response) => {
+        const { results } = response.data;
 
-  const deletePost = (id) => {
-      axios
-           .delete(`https://jsonplaceholder.typicode.com/posts/${id}`)
-           .then((response) => {
-              if (response.status === 200) {
-                setPosts(
-                  posts.filter((post) => {
-                  return post.id !== id;
-                  })
-                );
-                toast.error("Post Deleted!", {
-                  position: "top-right",
-                  autoClose: 2000,
-                  theme: "colored",
-                  icon: () => <img className='invert' src="/icons/delete.png" />
-              });
-              setPostToDelete(null);
-              }else{
-                toast.error("Failed to delete post. Please try again.", {
-                  position: "top-right",
-                  autoClose: 2000,
-                  theme: "colored",
-                });
-              }   
-           })
-           .catch((err) => {
-            toast.error("An error occurred. Please try again.", {
-              position: "top-right",
-              autoClose: 2000,
-              theme: "colored",
-            })
-            console.log(err.message)
-          })
-  }
-  // bg-[rgb(243,242,242)]
-  // bg-[#faf7f1]
+        Promise.all(
+          results.map((poke) => axios.get(poke.url))
+        ).then((allPokemonData) => {
+          const pokemonData = allPokemonData.map((res) => res.data);
+          setPokemon(pokemonData);
+          setFilteredPokemon(pokemonData);
+          setLoading(false); 
+        });
+      })
+      .catch((err) => {
+        console.error(`Error fetching data: ${err.message}`);
+        setLoading(false); 
+      });
+  }, []);
+
+  useEffect(() => {
+    const charactersArray = title.split('');
+
+    const timer = setInterval(() => {
+      setCharacters((prevCharacters) => [
+        ...prevCharacters,
+        charactersArray[prevCharacters.length],
+      ]);
+      if (charactersArray.length === characters.length) {
+        clearInterval(timer);
+      }
+    }, 150);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleSearch = (event) => {
+    const searchValue = event.target.value.toLowerCase();
+    setSearchTerm(searchValue);
+
+    const filtered = pokemon.filter((poke) =>
+      poke.name.toLowerCase().includes(searchValue)
+    );
+    setFilteredPokemon(filtered);
+  };
+
+  const getBorderClass = (types) => {
+    const primaryType = types[0]?.type.name;
+    switch (primaryType) {
+      case 'fire':
+        return 'border-[#EE8130] text-[#EE8130]';
+      case 'water':
+        return 'border-[#6390F0] text-[#6390F0]';
+      case 'grass':
+        return 'border-[#7AC74C] text-[#7AC74C]';
+      case 'bug':
+        return 'border-[#A6B91A] text-[#A6B91A]';
+      case 'normal':
+        return 'border-[#A8A77A] text-[#A8A77A]';
+      default:
+        return '';
+    }
+  };
+
   return (
     <>
-     <ToastContainer/>
-    <div className='bg-[rgb(243,242,242)]'>
-
-      <h1 className='text-center font-bold text-[30px]'>Some handpicked posts to display</h1>
-      <div className='mt-20 pl-10 flex max-w-[100%] gap-14 flex-wrap items-center'>
-            {posts.map((user) => {
-              return (
-                 <div className='w-[350px] flex flex-col items-center text-center gap-4 bg-white p-6 rounded-tl-[80px] rounded-br-[60px]' key={user.id}>
-                     <p><span className='font-bold'>User Id : </span><span className='text-[rgba(92,101,116,1)]'>{user.userId}</span></p>
-                     <p className='font-bold'>{user.title}</p> 
-                     <p className='text-[rgba(92,101,116,1)]'>{user.body}</p>
-                     <div >
-                     <button className='!border !border-red-500 !rounded-tl-[15px] !rounded-br-[15px]  !text-red-500 w-[80px]  p-2 hover:bg-red-500 hover:!text-white' onClick={() => openDeleteModal(user.id)}>Delete</button>
-                     </div>
-                 </div>
-              );
-           })}
-          {postToDelete && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-white p-8 rounded-lg w-full max-w-md">
-                    <div className="mb-4">
-                      <h1 className="text-xl font-bold text-center text-red-500">Confirm to delete post</h1>
-                    </div>
-                    <div className="mb-6">
-                      <p className='text-center'><span className='font-bold text-gray-800 '>UserId</span>: {postToDelete.userId}</p>
-                      <div className='flex flex-col gap-2 text-center justify-center mt-4'>
-                        <p><span className='font-bold text-gray-800'>Title</span>: {postToDelete.title}</p>
-                        <p><span className='font-bold text-gray-800'>Body</span>: {postToDelete.body}</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-4">
-                      <button className="btn btn-secondary bg-gray-500 hover:bg-gray-700 text-white py-2 px-4 rounded" onClick={() => setPostToDelete(null)}>Close</button>
-                      <button className="btn btn-primary bg-red-500 hover:bg-red-700 text-white py-2 px-4 rounded" onClick={() => deletePost(postToDelete.id)}>Delete</button>
-                    </div>
-                  </div>
-                </div>
-            )}
-
-      </div>
+      {loading ? ( 
+        <div className='flex justify-center items-center h-screen'>
+          <img 
+            src="https://pa1.narvii.com/6266/015de44cd7fd19725be5cf4fe31b4bb145def6b3_00.gif" 
+            alt="Loading..." 
+            className='w-32' 
+          />
+        </div>
+      ) : (
+        <div>
+          <div className='pt-8 pb-8'>
+            <div className='flex justify-center items-center '> 
+              <img src="https://gifdb.com/images/high/pikachu-head-in-pokeball-r9b2ib31yv989prx.gif" className='w-28'/>
+              <h1 className='text-center text-2xl font-bold'>
+                {characters.map((char, index) => (
+                  <span className='text-4xl' key={index}>{char}</span>
+                ))}
+              </h1>
             </div>
+
+            <div className='flex justify-center p-8'>
+              <input
+                type='text'
+                placeholder='Search Pokémon...'
+                className='border rounded-md p-2 w-80 focus:outline-none focus:ring focus:border-blue-300 '
+                value={searchTerm}
+                onChange={handleSearch}
+              />
+            </div>
+
+            <div className='flex flex-wrap justify-center gap-6'>
+              {filteredPokemon.length > 0 ? (
+                filteredPokemon.map((poke, index) => {
+                  return (
+                    <div
+                      className={`bg-transparent p-4 w-72 flex flex-col items-center text-center shadow-lg rounded-tl-[60px] rounded-br-[60px] border-4 ${getBorderClass(
+                        poke.types
+                      )} animate-cardEntry`}
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                      key={poke.id}
+                    >
+                      <p className='font-bold text-lg capitalize'>{poke.name}</p>
+                      <img
+                        src={poke.sprites.front_default}
+                        alt={poke.name}
+                        className='w-32 h-32 object-contain'
+                      />
+
+                      <p className='text-gray-700'>
+                        <span className='font-bold'>Height:</span> {poke.height}
+                      </p>
+                      <p className='text-gray-700'>
+                        <span className='font-bold'>Weight:</span> {poke.weight}
+                      </p>
+                      <p className='text-gray-700'>
+                        <span className='font-bold'>Type:</span>{' '}
+                        {poke.types.map((typeInfo) => typeInfo.type.name).join(', ')}
+                      </p>
+                      <p className='text-gray-700'>
+                        <span className='font-bold'>Abilities:</span>{' '}
+                        {poke.abilities
+                          .map((abilityInfo) => abilityInfo.ability.name)
+                          .join(', ')}
+                      </p>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className='text-center text-gray-500'>
+                  No Pokémon found matching your search
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
-  )
+  );
 }
 
-
-export default App
+export default App;

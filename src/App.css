@@ -1,0 +1,15 @@
+@keyframes cardEntry {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-cardEntry {
+    animation: cardEntry 2s ease-out both;
+  } 
+  
